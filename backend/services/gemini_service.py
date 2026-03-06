@@ -1,7 +1,11 @@
 import os
 import json
 from dotenv import load_dotenv
+<<<<<<< HEAD
 from google import genai
+=======
+import asyncio
+>>>>>>> 5d161d7 (Migrated from  pymongo to motor client and successfully merged with suhas's backend-dev branch)
 
 load_dotenv()
 
@@ -9,7 +13,7 @@ api_key=os.getenv("GEMINI_API_KEY")
 
 client = genai.Client(api_key=api_key)
 
-def analyze_issue(description: str):
+async def analyze_issue(description: str):
 
     prompt = f"""
 You are an AI that classifies civic complaints.
@@ -35,15 +39,23 @@ Return ONLY valid JSON in this format:
 {{
   "department": "...",
   "priority": "...",
-  "priority_score": "...",
+  "priority_score": "..."
 }}
 """
 
+<<<<<<< HEAD
     response = client.models.generate_content(
         model="gemini-3-flash-preview",
         contents=prompt,
     )
+=======
+    loop = asyncio.get_event_loop()
+>>>>>>> 5d161d7 (Migrated from  pymongo to motor client and successfully merged with suhas's backend-dev branch)
 
+    response = await loop.run_in_executor(
+        None,
+        lambda: model.generate_content(prompt)
+    )
     try:
         data = json.loads(response.text)
         return data

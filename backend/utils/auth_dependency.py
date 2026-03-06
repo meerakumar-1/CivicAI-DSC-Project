@@ -1,38 +1,33 @@
 from fastapi import Depends, HTTPException
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, JWTError
+from fastapi.security import HTTPBearer
+from jose import jwt
 from bson import ObjectId
-import database as db
-import os
-from dotenv import load_dotenv
 
-load_dotenv()
+from database import users_collection
+import os
+
+security = HTTPBearer()
 
 SECRET_KEY = os.getenv("JWT_SECRET")
 ALGORITHM = os.getenv("JWT_ALGORITHM")
 
-security = HTTPBearer()
 
-users_collection = db.users_collection
-
-
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-
-    token = credentials.credentials
+async def get_current_user(token=Depends(security)):
 
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+
         user_id = payload.get("user_id")
 
-        if user_id is None:
+        if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token")
 
-    except JWTError:
+        user = await users_collection.find_one({"_id": ObjectId(user_id)})
+
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+
+        return user
+
+    except:
         raise HTTPException(status_code=401, detail="Invalid token")
-
-    user = users_collection.find_one({"_id": ObjectId(user_id)})
-
-    if user is None:
-        raise HTTPException(status_code=401, detail="User not found")
-
-    return user

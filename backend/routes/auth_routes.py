@@ -6,9 +6,9 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 @router.post("/signup")
-def signup(user: UserSignup):
+async def signup(user: UserSignup):
 
-    token = signup_user(user)
+    token = await signup_user(user)
 
     return {
         "message": "User created",
@@ -17,9 +17,9 @@ def signup(user: UserSignup):
 
 
 @router.post("/login")
-def login(user: UserLogin):
+async def login(user: UserLogin):
 
-    token = login_user(user)
+    token = await login_user(user)
 
     return {
         "message": "Login successful",

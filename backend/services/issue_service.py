@@ -1,30 +1,38 @@
+import asyncio
+import json
 from datetime import datetime
 
 import pymongo
 from bson import ObjectId
-import database as db
+from database import issues_collection
 from services.gemini_service import analyze_issue
 from utils.mongo_serializer import serialize_doc
+<<<<<<< HEAD
 
 issues_collection = db.issues_collection
 fs = db.fs
+=======
+from utils.gridfs_service import upload_image
+>>>>>>> 5d161d7 (Migrated from  pymongo to motor client and successfully merged with suhas's backend-dev branch)
 
 
 async def create_issue(title, description, department, latitude, longitude, image, user_id):
+    analysis_task = analyze_issue(description)
+    upload_task = upload_image(image)
 
-    ai_result = analyze_issue(description)
-
-    ai_department = ai_result["department"]
-    priority = ai_result["priority"]
-    priority_score = ai_result["priority_score"]
-
-    image_bytes = await image.read()
-
-    image_id = fs.put(
-        image_bytes,
-        filename=image.filename,
-        content_type=image.content_type
+    analysis_result, image_id = await asyncio.gather(
+        analysis_task,
+        upload_task
     )
+    try:
+        ai_data = json.loads(analysis_result)
+        ai_department = ai_data.get("department", department)
+        priority = ai_data.get("priority", "medium")
+        priority_score = ai_data.get("priority_score", 50)
+    except:
+        ai_department = department
+        priority = "medium"
+        priority_score = 50
 
     new_issue = {
         "title": title,
@@ -53,12 +61,13 @@ async def create_issue(title, description, department, latitude, longitude, imag
         "resolved_at": None
     }
 
-    result = issues_collection.insert_one(new_issue)
+    result =await issues_collection.insert_one(new_issue)
 
     return str(result.inserted_id)
 
-def get_user_issues(user_id):
+async def get_user_issues(user_id):
 
+<<<<<<< HEAD
     issues = list(
         issues_collection.find(
             {"reported_by": ObjectId(user_id)}
@@ -66,21 +75,31 @@ def get_user_issues(user_id):
     )
 
     return [serialize_doc(issue) for issue in issues]
+=======
+    issues = await issues_collection.find(
+        {"reported_by": ObjectId(user_id)}
+    ).to_list(length=100)
 
-def get_nearby_issues(lat, lng, radius):
+    return [serialize_doc(issue) for issue in issues]
 
-    issues = list(
-        issues_collection.find({
-            "location": {
-                "$near": {
-                    "$geometry": {
-                        "type": "Point",
-                        "coordinates": [lng, lat]
-                    },
-                    "$maxDistance": radius
-                }
+async def get_nearby_issues(lat, lng, radius):
+>>>>>>> 5d161d7 (Migrated from  pymongo to motor client and successfully merged with suhas's backend-dev branch)
+
+    issues = await issues_collection.find({
+        "location": {
+            "$near": {
+                "$geometry": {
+                    "type": "Point",
+                    "coordinates": [lng, lat]
+                },
+                "$maxDistance": radius
             }
+<<<<<<< HEAD
         }).limit(25)
     )
+=======
+        }
+    }).to_list(length=50)
+>>>>>>> 5d161d7 (Migrated from  pymongo to motor client and successfully merged with suhas's backend-dev branch)
 
     return [serialize_doc(issue) for issue in issues]

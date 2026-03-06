@@ -1,16 +1,14 @@
 from datetime import datetime
 from fastapi import HTTPException
-import database as db
+from database import users_collection
 
 from utils.hashing import hash_password, verify_password
 from utils.jwt_handler import create_access_token
 
-users_collection = db.users_collection
 
+async def signup_user(user):
 
-def signup_user(user):
-
-    existing_user = users_collection.find_one({"email": user.email})
+    existing_user = await users_collection.find_one({"email": user.email})
 
     if existing_user:
         raise HTTPException(status_code=400, detail="User already exists")
@@ -26,7 +24,7 @@ def signup_user(user):
         "created_at": datetime.utcnow()
     }
 
-    result = users_collection.insert_one(new_user)
+    result = await users_collection.insert_one(new_user)
 
     token = create_access_token({
         "user_id": str(result.inserted_id)
@@ -35,9 +33,9 @@ def signup_user(user):
     return token
 
 
-def login_user(user):
+async def login_user(user):
 
-    db_user = users_collection.find_one({"email": user.email})
+    db_user = await users_collection.find_one({"email": user.email})
 
     if not db_user:
         raise HTTPException(status_code=401, detail="Invalid credentials")

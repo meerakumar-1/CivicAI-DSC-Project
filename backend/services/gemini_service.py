@@ -1,66 +1,70 @@
 import os
 import json
-from dotenv import load_dotenv
-<<<<<<< HEAD
-from google import genai
-=======
 import asyncio
->>>>>>> 5d161d7 (Migrated from  pymongo to motor client and successfully merged with suhas's backend-dev branch)
+from google import genai
+from google.genai.errors import ServerError
+from dotenv import load_dotenv
 
 load_dotenv()
 
-api_key=os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-client = genai.Client(api_key=api_key)
+client = genai.Client(api_key=GEMINI_API_KEY)
 
-async def analyze_issue(description: str):
+
+async def analyze_issue(description: str, fallback_department: str):
 
     prompt = f"""
-You are an AI that classifies civic complaints.
+    A citizen reported the following civic issue:
 
-A citizen reported the following issue:
+    {description}
 
-Description: {description}
+    Determine:
+    1. Correct department
+    2. Priority (low, medium, high)
 
-Determine:
-1. The most appropriate department
-2. Priority level (low, medium, high)
-3. Priority Score, whole number between 0 and 100
+    Return ONLY valid JSON in this format:
 
-Possible departments:
-Road
-Electricity
-Water
-Sanitation
-BBMP
+    {{
+        "department": "...",
+        "priority": "..."
+    }}
+    """
 
-Return ONLY valid JSON in this format:
+    retries = 3
 
-{{
-  "department": "...",
-  "priority": "...",
-  "priority_score": "..."
-}}
-"""
+    for attempt in range(retries):
 
-<<<<<<< HEAD
-    response = client.models.generate_content(
-        model="gemini-3-flash-preview",
-        contents=prompt,
-    )
-=======
-    loop = asyncio.get_event_loop()
->>>>>>> 5d161d7 (Migrated from  pymongo to motor client and successfully merged with suhas's backend-dev branch)
+        try:
 
-    response = await loop.run_in_executor(
-        None,
-        lambda: model.generate_content(prompt)
-    )
-    try:
-        data = json.loads(response.text)
-        return data
-    except:
-        return {
-            "department": "BBMP",
-            "priority": "medium"
-        }
+            loop = asyncio.get_event_loop()
+
+            response = await loop.run_in_executor(
+                None,
+                lambda: client.models.generate_content(
+                    model="gemini-1.5-flash",
+                    contents=prompt
+                )
+            )
+
+            text = response.text
+
+            data = json.loads(text)
+
+            return {
+                "department": data.get("department", fallback_department),
+                "priority": data.get("priority", "medium")
+            }
+
+        except ServerError:
+            # retry on 503
+            await asyncio.sleep(2)
+
+        except Exception:
+            break
+
+    # FAILSAFE fallback
+    return {
+        "department": fallback_department,
+        "priority": "medium"
+    }

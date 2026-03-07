@@ -22,7 +22,7 @@ app = FastAPI()
 # Connection logic
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # change later
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
